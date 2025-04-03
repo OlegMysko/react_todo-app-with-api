@@ -3,11 +3,12 @@
 import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { UserWarning } from './UserWarning';
-import { updateTodoTitle, USER_ID } from './api/todos';
+import { USER_ID } from './api/todos';
 import { Todo } from './types/Todo';
 import { getTodos } from './api/todos';
 import { createTodo } from './api/todos';
 import { delTodos } from './api/todos';
+import { updateTodoTitle } from './api/todos';
 import { TodoHeader } from './components/TodoHeader';
 import { updateTodoStatus } from './api/todos';
 import { updateAllTodos } from './api/todos';
@@ -15,6 +16,7 @@ import { TodoList } from './components/TodoList';
 import { TodoFooter } from './components/TodoFooter';
 import { ErrorNotification } from './components/ErrorNotification';
 import { Filter } from './types/Filter';
+
 export const App: React.FC = () => {
   const [isInput, setIsInput] = useState('');
   const [todos, setTodo] = useState<Todo[]>([]);
@@ -127,12 +129,6 @@ export const App: React.FC = () => {
   }) => {
     const newStatus = !completed;
 
-    setTodo(prevTodos =>
-      prevTodos.map(todo =>
-        todo.id === id ? { ...todo, completed: newStatus } : todo,
-      ),
-    );
-
     setLoadingTodoId(prev => [...prev, id]);
 
     updateTodoStatus({ id, completed: newStatus })
@@ -155,34 +151,6 @@ export const App: React.FC = () => {
       })
       .finally(() => {
         setLoadingTodoId(prev => prev.filter(todoId => todoId !== id));
-      });
-  };
-
-  const handleUpdateTitle = ({ id, title }: { id: number; title: string }) => {
-    const trimmedTitle = title.trim();
-
-    setLoadingTodoId(prev => [...prev, id]);
-
-    const previousTitle = todos.find(todo => todo.id === id)?.title;
-
-    const updatedTodos = todos.map(todo =>
-      todo.id === id ? { ...todo, title: trimmedTitle } : todo,
-    );
-
-    setTodo(updatedTodos);
-
-    updateTodoTitle({ id, title: trimmedTitle })
-      .then(() => {
-        setLoadingTodoId(prev => prev.filter(todoId => todoId !== id));
-      })
-      .catch(() => {
-        const revertedTodos = todos.map(todo =>
-          todo.id === id ? { ...todo, title: previousTitle } : todo,
-        );
-
-        setTodo(revertedTodos);
-        setLoadingTodoId(prev => prev.filter(todoId => todoId !== id));
-        handleError('Unable to update a todo');
       });
   };
 
@@ -215,6 +183,39 @@ export const App: React.FC = () => {
     });
   };
 
+  const handleUpdateTitle = async ({
+    id,
+    title,
+  }: {
+    id: number;
+    title: string;
+  }) => {
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
+      handleRemoveTodo(id);
+
+      return;
+    }
+
+    setLoadingTodoId(prev => [...prev, id]);
+
+    try {
+      const updatedTodo = await updateTodoTitle({ id, title: trimmedTitle });
+
+      setTodo(prevTodos =>
+        prevTodos.map(todo =>
+          todo.id === id ? { ...todo, title: updatedTodo.title } : todo,
+        ),
+      );
+    } catch (error) {
+      handleError('Unable to update a todo');
+      throw error;
+    } finally {
+      setLoadingTodoId(prev => prev.filter(todoId => todoId !== id));
+    }
+  };
+
   return (
     <div className="todoapp">
       <h1 className="todoapp__title">todos</h1>
@@ -242,6 +243,7 @@ export const App: React.FC = () => {
             loadingTodoId={loadingTodoId}
             handleUpdateTodoChecked={handleUpdateTodoChecked}
             handleUpdateTitle={handleUpdateTitle}
+            handleError={handleError}
           />
         }
 

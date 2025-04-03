@@ -13,7 +13,11 @@ export const TodoList: React.FC<Props> = ({
   tempTodo,
   loadingTodoId,
   handleUpdateTodoChecked,
+  handleError,
   handleUpdateTitle,
+
+  isEdditingTodo,
+  setEditingTodo,
 }) => {
   return (
     <section className="todoapp__main" data-cy="TodoList">
@@ -22,6 +26,7 @@ export const TodoList: React.FC<Props> = ({
       {getFilter().map(tod => {
         return (
           <TodoItem
+            handleError={handleError}
             handleRemoveTodo={delitePost}
             tod={tod}
             key={tod.id}
@@ -29,6 +34,8 @@ export const TodoList: React.FC<Props> = ({
             loadingTodoId={loadingTodoId}
             handleUpdateTodoChecked={handleUpdateTodoChecked}
             handleUpdateTitle={handleUpdateTitle}
+            isEditingTodo={isEdditingTodo}
+            setEditingTodo={setEditingTodo}
           />
         );
       })}
